@@ -102,8 +102,7 @@ int main()
     while(ciaa->ciapra & CIAF_GAMEPORT0) {
 
     }
-    
-    
+        
     Enable();
 	Permit();
 
