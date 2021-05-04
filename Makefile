@@ -4,7 +4,6 @@ CC=$(AMIGA_GCC_BIN)/m68k-amigaos-gcc
 LDFLAGS=
 ODIR=build-gcc
 VASM=$(AMIGA_GCC_BIN)/vasmm68k_mot
-
 EXE=/Volumes/share/amiga-c/prog1
 _OBJ = main.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))

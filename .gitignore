@@ -1,6 +1,7 @@
 build*
-fs-uae/hd0/hello
+amiga-gcc/
+amiga-gcc
 .DS_Store
 bin/*
 .vscode/ipch
-amiga-gcc/
+
