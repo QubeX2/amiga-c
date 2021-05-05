@@ -3,7 +3,8 @@
         {
             "name": "Amiga",
             "includePath": [
-                "${workspaceFolder}/amiga-gcc/**"
+                "${workspaceFolder}/amiga-gcc/**",
+                "${workspaceFolder}/libs/SDI/includes/**"
             ],
             "defines": [
                 "_NO_INLINE"

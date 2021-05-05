@@ -9,6 +9,21 @@
         ]
     },
     "files.associations": {
-        "dmabits.h": "c"
+        "dmabits.h": "c",
+        "exec_pragmas.h": "c",
+        "exec_protos.h": "c",
+        "memory": "cpp",
+        "functional": "cpp",
+        "random": "cpp",
+        "*.tcc": "cpp",
+        "future": "cpp",
+        "typeindex": "cpp",
+        "cinttypes": "c",
+        "cmath": "c",
+        "complex": "c",
+        "cstdlib": "c",
+        "numeric": "c",
+        "ratio": "c",
+        "*.def": "c"
     }
 }

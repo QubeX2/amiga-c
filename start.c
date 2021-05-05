@@ -1,4 +1,5 @@
 #include "start.h"
+#include <stdio.h>
 
 static struct IntuitionBase *IntuitionBase;
 static struct GfxBase *GfxBase;
@@ -31,7 +32,25 @@ void wait_raster(ULONG raster)
 /**
  * 
  */
-BOOL init_display(void)
+#define MOD_SIZE (339546)
+static UBYTE __chip mod_data[MOD_SIZE];
+
+void init_music(STRPTR modpath, BOOL is_pal)
+{
+    FILE *fp = fopen(modpath, "rb");
+    int bytes_read = fread(mod_data, sizeof(UBYTE), MOD_SIZE, fp);
+    fclose(fp);
+    void *p_samples = NULL;
+    UBYTE start_pos = 0;
+    mt_install_cia(custom, NULL, is_pal);
+    mt_init(custom, mod_data, p_samples, start_pos);
+    mt_Enable = 1;
+}
+
+/**
+ * 
+ */
+BOOL init_display()
 {
     LoadView(NULL);
     WaitTOF();
@@ -72,6 +91,7 @@ BOOL init_system(ULONG coplist)
 
     SetTaskPri(FindTask(NULL), TASK_PRIORITY);
     BOOL is_pal = init_display();
+    init_music("assets/modules/OroIncenso.mod", is_pal);
     printf("PAL display: %d\n", is_pal);
 
     custom->cop1lc = coplist;
@@ -89,8 +109,6 @@ BOOL init_system(ULONG coplist)
     custom->intreq = 0x7fff;
     custom->intreq = 0x7fff;
 
-    custom->intena = (INTF_SETCLR | INTF_EXTER);
-
     *ICRA=0x7f;
 
     return TRUE;
@@ -101,13 +119,17 @@ BOOL init_system(ULONG coplist)
  */
 void close_system(STRPTR message) 
 {
+    mt_Enable = 0;
+    mt_end(custom);
+    mt_remove_cia(custom);    
+
     *(ULONG *)0x68 = level2_vector;
     *(ULONG *)0x6c = level3_vector;
 
     // disable dma and interupts
     custom->dmacon = 0x7fff;
     custom->intena = 0x7fff;
-    //custom->intreq = 0x7fff;
+    custom->intreq = 0x7fff;
 
     custom->adkcon = old_adkcon;
     custom->dmacon = old_dmacon | (DMAF_MASTER | DMAF_RASTER);
