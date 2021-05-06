@@ -21,6 +21,6 @@ struct CoordXY {
     UWORD y;
 };
 
-void draw_line(UWORD x1, UWORD y1, UWORD x2, UWORD y2, APTR* bitplane);
+void draw_line(UWORD x1, UWORD y1, UWORD x2, UWORD y2, PLANEPTR bitplane);
 
 #endif /* __LINE_H__ */

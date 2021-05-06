@@ -5,8 +5,18 @@
 #include "start.h"
 #include "line.h"
 
+#define SCREEN_WIDTH (320)
+#define SCREEN_HEIGHT (256)
+#define SCREEN_HALF_WIDTH SCREEN_WIDTH/2
+#define SCREEN_HALF_HEIGHT SCREEN_HEIGHT/2
+#define BYTES_PER_ROW (SCREEN_WIDTH / 8)
+
 volatile struct CIA *ciaa = (struct CIA *)0xbfe001;
 static struct Custom *custom = (struct Custom*)0xdff000;
+static UWORD angle_z = 0;
+static UWORD angle_y = 0;
+static UWORD angle_x = 0;
+extern WORD sintable[];
 
 static UWORD __chip coplist[] = {
     COPMOVE(BPLCON0, 0x1200),
@@ -28,10 +38,13 @@ static UWORD __chip coplist[] = {
     COPEND()
 };
 
-static ULONG __chip bitplane[10*256];
+static PLANEPTR __chip display_buffer1a;
+static PLANEPTR __chip display_buffer1b;
+static PLANEPTR __chip display_tmp;
+
 
 #define POINT_COUNT (8)
-#define MAX (18<<8)
+#define MAX (16<<8)
 struct PointXYZ points[POINT_COUNT] = {
     { -MAX, -MAX, -MAX },
     { MAX, -MAX, -MAX },
@@ -72,51 +85,105 @@ struct LineAB lines[LINE_COUNT] = {
 
 void rotate_points()
 {
+    LONG sinz = sintable[angle_z];
+    LONG cosz = sintable[angle_z + 90];
+    LONG siny = sintable[angle_y];
+    LONG cosy = sintable[angle_y + 90];
+    LONG sinx = sintable[angle_x];
+    LONG cosx = sintable[angle_x + 90];
+
     for(UBYTE i=0;i<POINT_COUNT;i++) {
-        WORD z = -points[i].z;
-        z >>= 8;
-        z += 78;
-        coords[i].x = (UWORD)points[i].x / z + 320;
-        coords[i].y = (UWORD)points[i].y / z + 256;
-        printf("Coords: X %d, Y %d\n", coords[i].x, coords[i].y);
+        LONG xi = (LONG)points[i].x;
+        LONG yi = (LONG)points[i].y;
+        LONG zi = (LONG)points[i].z;
+        // ROT Z
+        // x' = x*cos q - y*sin q
+		// y' = x*sin q + y*cos q
+        LONG xz = xi * cosz - yi * sinz;
+        xz >>= 8;
+        LONG yz = xi * sinz + yi * cosz;
+        yz >>= 8;
+
+        // ROT X
+        // y' = y*cos q - z*sin q
+	    // z' = y*sin q + z*cos q
+        LONG yx = yz * cosx - zi * sinx;
+        yx >>= 8;
+        LONG zx = yz * sinx + zi * cosx;
+        zx >>= 8;
+
+        // ROT Y
+        // z' = z*cos q - x*sin q
+		// x' = z*sin q + x*cos q
+        LONG zy = zx * cosy - xz * siny;
+        zy >>= 8;
+        LONG xy = zx * siny + xz * cosy;
+        xy >>= 8;
+
+        zy = -zy;
+        zy >>= 8;
+        zy += 78;
+
+        coords[i].x = xy / zy + SCREEN_HALF_WIDTH;
+        coords[i].y = yx / zy + SCREEN_HALF_HEIGHT;
     }
-    printf("\n");
+
+    angle_z = angle_z >= 360 ? angle_z - 360 : angle_z + 1;
+    angle_y = angle_y >= 360 ? angle_y - 360 : angle_y + 4;
+    angle_x = angle_x >= 360 ? angle_x - 360 : angle_x + 2;
 }
 
-void draw_cube()
+void draw_cube(PLANEPTR plane)
 {
     for(UBYTE i=0;i<LINE_COUNT;i++) {
         struct LineAB line = lines[i];
         struct CoordXY c1 = coords[line.a];
         struct CoordXY c2 = coords[line.b];
-        //printf("C1: %d, %d\n", c1.x, c1.y);
-        //printf("C2: %d, %d\n", c2.x, c2.y);
-        //draw_line(c1.x, c1.y, c2.x, c2.y, (APTR)&bitplane);
-        draw_line(320,256,1,1, (APTR)&bitplane);
+        draw_line(c1.x, c1.y, c2.x, c2.y, plane);
     }
-    //printf("\n");
 }
 
+void swap_buffers()
+{
+    display_tmp = display_buffer1a;
+    display_buffer1a = display_buffer1b;
+    display_buffer1b = display_tmp;
+}
+
+void clear_screen(PLANEPTR plane, ULONG size)
+{
+    for(ULONG* i=(ULONG*)plane;i<(ULONG*)plane+size;i++) {
+        *i=0;
+    }
+}
+
+/**
+ * 
+ */
 int main() 
 {
-   if(init_system((ULONG)coplist) == TRUE) {
+
+    if(init_system((ULONG)coplist) == TRUE) {
         custom->dmacon = (DMAF_SETCLR | DMAF_COPPER | DMAF_BLITTER | DMAF_RASTER | DMAF_AUDIO | DMAF_MASTER);
         custom->intena = (INTF_SETCLR | INTF_EXTER | INTF_INTEN | INTF_AUD0 | INTF_AUD1| INTF_AUD2| INTF_AUD3);
 
+        ULONG size = BYTES_PER_ROW * SCREEN_HEIGHT;
+        display_buffer1a = AllocMem(size, MEMF_CHIP | MEMF_CLEAR);
+        display_buffer1b = AllocMem(size, MEMF_CHIP | MEMF_CLEAR);
+
         while(ciaa->ciapra & CIAF_GAMEPORT0) {
             wait_raster(303);
-            custom->bplpt[0] = &bitplane;
-
-            for(int i=0;i<10*256;i++) {
-                bitplane[i] = 0x00000000;
-            }
-
-
+            clear_screen(display_buffer1b, 10*256);
             rotate_points();
-
-            draw_cube();
-
+            draw_cube(display_buffer1b);
+            custom->cop1lc = (ULONG)coplist;
+            custom->bplpt[0] = display_buffer1a;
+            UWORD c = custom->copjmp1;
+            swap_buffers();
         }
+
+        FreeMem(display_buffer1a, size);
+        FreeMem(display_buffer1b, size);
     }
       
 	close_system("Exited!");

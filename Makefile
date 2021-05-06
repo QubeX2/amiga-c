@@ -4,10 +4,12 @@ CC=$(AMIGA_GCC_BIN)/m68k-amigaos-gcc
 LDFLAGS=-lamiga -lauto
 ODIR=build-gcc
 VASM=$(AMIGA_GCC_BIN)/vasmm68k_mot
-EXE=/Volumes/share/amiga-c/pixelcube
+NAME=pixelcube
+EXE=/Volumes/share/amiga-c/$(NAME)
+ASM=$(NAME).s
 _OBJ = pixelcube.o start.o line.o ptplayer.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
-CFLAGS = -m68030 -Ilibs/SDI/includes
+CFLAGS = -g0 -O3 -m68030 -Ilibs/SDI/includes -Wno-int-to-pointer-cast
 LDLIBS =
 
 # Prepare variables for target 'clean'
@@ -23,14 +25,14 @@ endif
 all: $(EXE)
 
 $(EXE) : $(OBJ) 
-	$(CC) $(CFLAGS) $(OBJ) -g -o $(EXE)
+	$(CC) $(CFLAGS) $(OBJ) -o $(EXE)
 
 $(ODIR)/%.o : %.c
-	$(CC) $(CFLAGS) -g -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -S -o $(ODIR)/asm/$*.s $<
 
 $(ODIR)/%.o : %.asm
-	$(VASM) -Fhunk -Iamiga-gcc/m68k-amigaos/ndk-include -o $@ $<
-
+	$(VASM) -Fhunk -m68030 -Iamiga-gcc/m68k-amigaos/ndk-include -o $@ $<
 
 clean:
 	-$(RM) $(ODIR)$(PATHSEP)*.o

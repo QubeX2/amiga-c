@@ -22,6 +22,8 @@
 #define COPEND() 0xffff, 0xfffe
 #define COPWAIT(VP, HP) VP, HP
 
+extern WORD sintable[];
+
 BOOL init_display(void);
 void close_system(STRPTR message);
 BOOL init_system(ULONG coplist);

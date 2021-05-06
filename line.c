@@ -13,7 +13,7 @@ static struct Custom *custom = (struct Custom*)0xdff000;
 #define LF_COOKIE_CUT (0xca)
 #define LF_XOR (0x4a)
 
-void draw_line(UWORD x1, UWORD y1, UWORD x2, UWORD y2, APTR* bitplane)
+void draw_line(UWORD x1, UWORD y1, UWORD x2, UWORD y2, PLANEPTR bitplane)
 {
     UWORD width = 320;
     UWORD dx = abs(x2 - x1);
@@ -49,11 +49,12 @@ void draw_line(UWORD x1, UWORD y1, UWORD x2, UWORD y2, APTR* bitplane)
     UWORD texture = (x1 & 0xf) << 12;
     UWORD sign = (aptlval < 0 ? 1 : 0) << 6;
     UWORD bltcon1val = texture | sign | (octant << 2) | 0x01;
+    PLANEPTR start_address = bitplane + (y1 * bpl + x1 / 8);
 
     WaitBlit();
     custom->bltapt = (APTR) ((UWORD) aptlval);
-    custom->bltcpt = bitplane;
-    custom->bltdpt = bitplane;
+    custom->bltcpt = start_address;
+    custom->bltdpt = start_address;
     custom->bltamod = 4 * (dmin - dmax);    
     custom->bltbmod = 4 * dmin;
     custom->bltcmod = width / 8;
