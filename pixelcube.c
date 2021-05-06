@@ -76,9 +76,11 @@ void rotate_points()
         WORD z = -points[i].z;
         z >>= 8;
         z += 78;
-        printf("Z %d\n", z);
-        printf("X %d, Y %d\n", points[i].x >> 5, points[i].y >> 7);
+        coords[i].x = (UWORD)points[i].x / z + 320;
+        coords[i].y = (UWORD)points[i].y / z + 256;
+        printf("Coords: X %d, Y %d\n", coords[i].x, coords[i].y);
     }
+    printf("\n");
 }
 
 void draw_cube()
@@ -87,8 +89,12 @@ void draw_cube()
         struct LineAB line = lines[i];
         struct CoordXY c1 = coords[line.a];
         struct CoordXY c2 = coords[line.b];
+        //printf("C1: %d, %d\n", c1.x, c1.y);
+        //printf("C2: %d, %d\n", c2.x, c2.y);
         //draw_line(c1.x, c1.y, c2.x, c2.y, (APTR)&bitplane);
+        draw_line(320,256,1,1, (APTR)&bitplane);
     }
+    //printf("\n");
 }
 
 int main() 
@@ -99,14 +105,16 @@ int main()
 
         while(ciaa->ciapra & CIAF_GAMEPORT0) {
             wait_raster(303);
+            custom->bplpt[0] = &bitplane;
+
             for(int i=0;i<10*256;i++) {
                 bitplane[i] = 0x00000000;
             }
 
+
             rotate_points();
 
             draw_cube();
-            custom->bplpt[0] = &bitplane;
 
         }
     }
